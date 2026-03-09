@@ -83,14 +83,20 @@ export async function getAssetStatus(playbackId: string) {
                 const vttText = await response.text()
 
                 const cues = vttText.split('\n\n').slice(1) // Skip the WEBVTT header
-                transcript = cues.reduce((acc: { time: string; text: string }[], cue: string) => {
-                    const [time, text] = cue.split('\n')
-                    return [...acc, { time, text }]
+                transcript = cues.reduce<{ time: string; text: string }[]>((acc, cue) => {
+                    const lines = cue.split('\n')
+                    if (lines.length >= 2 && lines[1].includes('-->')) {
+                        const time = formatVttTime(lines[0])
+                        const text = lines.slice(2).join(' ')
+                        acc.push({ time, text })
+                    }
+                    return acc
                 }, [])
             }
-
+            return { status: asset.status,  transcriptStatus, transcript }
         }
     } catch (error) {
         console.error("Error fetching asset status:", error)
+        return { status: 'errored', transcriptStatus: 'errored', transcript: [] }
     }
 }
